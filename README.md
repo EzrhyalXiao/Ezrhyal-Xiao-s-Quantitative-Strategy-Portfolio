@@ -1,1 +1,1 @@
-# TheShy-Xiao-s-Quantitative-Strategy-Portfolio
+# TheShy-Xiao-Quantitative-Strategy-Portfolio
