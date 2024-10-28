@@ -1,5 +1,8 @@
 # Quantitative-Strategy-Portfolio
-This repo shows part of my strategy portfolio, including PNL visualization and main backtesting framework
-If you are interested in exploring the complete logic and implementation of the strategy, feel free to reach out to me via email at 2020302131253@whu.edu.cn. 
-I would be more than happy to share further details and insights.
+This repository showcases a segment of my strategic portfolio, featuring both the profit and loss (PNL) visualization and the core backtesting framework. It offers a glimpse into the comprehensive approach I've developed for navigating market opportunities.
+
+For those who are intrigued by the intricacies of my trading strategy and wish to delve deeper into its underlying principles and execution, I cordially invite you to connect with me. Please send an email to 2020302131253@whu.edu.cn, and I will be delighted to provide you with a more exhaustive overview, including the nuances and insights that shape the strategy's success.
+
+I look forward to the opportunity to engage in meaningful discussions and to share the detailed workings of this strategy with you.
+
 
