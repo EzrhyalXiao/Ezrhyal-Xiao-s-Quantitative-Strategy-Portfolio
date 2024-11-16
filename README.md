@@ -23,12 +23,12 @@ This repository showcases a segment of my strategic portfolio, featuring both th
  'commodity_future_production_willingness_strategy',
  'commodity_future_inventory_cross_section_strategy'
 - **OverallPortfolio**:
-![Portfolio](https://raw.githubusercontent.com/HtianXiao/Quantitative-Strategy-Portfolio/main/CTA%20Zoo/performance_plot.jpg)
+![Portfolio](https://raw.githubusercontent.com/HtianXiao/DIY-Quantitative-Strategy-Portfolio/main/CTA%20Zoo/performance_plot.jpg)
 
-![Monthly Return](https://raw.githubusercontent.com/HtianXiao/Quantitative-Strategy-Portfolio/main/CTA%20Zoo/monthly_return.jpg)
+![Monthly Return](https://raw.githubusercontent.com/HtianXiao/DIY-Quantitative-Strategy-Portfolio/main/CTA%20Zoo/monthly_return.jpg)
 
 - **SubStrategy**:
-![Sub-strategy Performance](https://raw.githubusercontent.com/HtianXiao/Quantitative-Strategy-Portfolio/main/CTA%20Zoo/PNL%20Overall.png)
+![Sub-strategy Performance](https://raw.githubusercontent.com/HtianXiao/DIY-Quantitative-Strategy-Portfolio/main/CTA%20Zoo/PNL%20Overall.png)
 
 
 ### 2. **Model Zoo**
