@@ -1,0 +1,88 @@
+qlib_init:
+    provider_uri: "D:\\qlib_data\\qlib_cn"
+    region: cn
+market: &market csi500
+benchmark: &benchmark SH000905
+data_handler_config: &data_handler_config
+    start_time: 2018-01-01
+    end_time: 2023-12-31
+    fit_start_time: 2018-01-01
+    fit_end_time: 2023-12-31
+    instruments: *market
+    infer_processors:
+        - class: FilterCol
+          kwargs:
+              fields_group: feature
+              col_list: [ 'CLOSE1', 'OPEN1', 'HIGH1', 'LOW1', 'VWAP1', 'VOLUME1']
+        - class: CSRankNorm
+          kwargs:
+              fields_group: feature
+        - class: Fillna
+          kwargs:
+              fields_group: feature
+    learn_processors:
+        - class: DropnaLabel
+        - class: CSRankNorm
+          kwargs:
+              fields_group: label
+    label: ["Ref($close, -5) / Ref($close, -1) - 1"]
+port_analysis_config: &port_analysis_config
+    strategy:
+        class: TopkDropoutStrategy
+        module_path: qlib.contrib.strategy
+        kwargs:
+            signal: <PRED>
+            topk: 400
+            n_drop: 400
+    backtest:
+        start_time: 2021-01-01
+        end_time: 2023-03-01
+        account: 100000000
+        benchmark: *benchmark
+        exchange_kwargs:
+            limit_threshold: 0.095
+            deal_price: close
+            open_cost: 0.0005
+            close_cost: 0.0015
+            min_cost: 5
+task:
+    model:
+        class: KansformerModel
+        module_path: kansformer
+        kwargs:
+            d_feat: 6
+            d_model: 8
+            metric: loss
+            n_epochs: 10
+            early_stop: 3
+            loss: mse
+            GPU: 0
+            seed: 0
+    dataset:
+        class: TSDatasetH
+        module_path: qlib.data.dataset
+        kwargs:
+            handler:
+                class: Alpha360
+                module_path: qlib.contrib.data.handler
+                kwargs: *data_handler_config
+            segments:
+                train: [2018-01-01, 2020-12-31]
+                valid: [2021-01-01, 2021-12-31]
+                test: [2022-01-01, 2023-12-31]
+            step_len: 60
+    record: 
+        - class: SignalRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            model: <MODEL>
+            dataset: <DATASET>
+        - class: SigAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            ana_long_short: False
+            ann_scaler: 252
+        - class: PortAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            config: *port_analysis_config

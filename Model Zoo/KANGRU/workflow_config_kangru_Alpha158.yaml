@@ -1,0 +1,110 @@
+qlib_init:
+    provider_uri: "D:\\qlib_data\\qlib_cn"
+    region: cn
+market: &market all
+benchmark: &benchmark SH000985
+data_handler_config: &data_handler_config
+    start_time: 2016-01-01
+    end_time: 2023-12-31
+    fit_start_time: 2016-01-01
+    fit_end_time: 2023-12-31
+    instruments: *market
+    infer_processors:
+#        - class: DropCol
+#          kwargs:
+##              fields_group: feature
+#              col_list: ["VWAP0",]
+        - class: FilterCol
+          kwargs:
+              fields_group: feature
+              col_list:  [  'mv', 'VWAP0', 'KMID', 'KLEN', 'CORD5',
+                             'KMID2', 'RESI5', 'CORR5', 'KLOW', 'VSTD5',
+                             'CORD10', 'RESI10', 'WVMA5', 'WVMA10', 'CORR10',
+                             'MIN60', 'CORD20', 'STD60', 'VSTD10', 'KLOW2',
+                             'ROC60', 'ROC5', 'RESI20', 'WVMA60', 'QTLD5', 'RSQR10']
+
+#              col_list:  [  'mv', 'VWAP0', 'KMID', 'KLEN', 'CORD5',
+#                             'KMID2', 'RESI5', 'CORR5', 'KLOW', 'VSTD5',
+#                             'CORD10']
+        - class: CSRankNorm
+#        - class: RobustZScoreNorm
+          kwargs:
+              fields_group: feature
+#              clip_outlier: true
+        - class: FillnaType
+          kwargs:
+              fields_group: feature
+              fill_method: 'ffill'
+    learn_processors:
+        - class: DropnaLabel
+        - class: CSRankNorm
+          kwargs:
+              fields_group: label
+#    label: ["Ref($close, -5) / $close - 1"]
+    label: ["Ref($close, -5) / Ref($close, -1) - 1"]
+
+port_analysis_config: &port_analysis_config
+    strategy:
+        class: TopkDropoutStrategy
+        module_path: qlib.contrib.strategy
+        kwargs:
+            signal: <PRED>
+            topk: 50
+            n_drop: 5
+    backtest:
+        start_time: 2021-01-01
+        end_time: 2023-03-01
+        account: 100000000
+        benchmark: *benchmark
+        exchange_kwargs:
+            limit_threshold: 0.095
+            deal_price: close
+            open_cost: 0.0005
+            close_cost: 0.0015
+            min_cost: 5
+task:
+    model:
+        class: GRU
+        module_path: qlib.contrib.model.pytorch_gru_ts
+        kwargs:
+            d_feat: 26
+            hidden_size: 64
+            num_layers: 2
+            dropout: 0.0
+            n_epochs: 200
+            lr: 1e-3
+            early_stop: 10
+            batch_size: 800
+            metric: loss
+            loss: mse
+            n_jobs: 20
+            GPU: 0
+            rnn_type: GRU
+    dataset:
+        class: TSDatasetH
+        module_path: qlib.data.dataset
+        kwargs:
+            handler:
+                class: Alpha158
+                module_path: qlib.contrib.data.handler
+                kwargs: *data_handler_config
+            segments:
+                train: [2016-01-01, 2019-12-31]
+                valid: [2020-01-01, 2020-12-31]
+                test: [2021-01-01, 2023-03-01]
+            step_len: 60
+    record:
+        - class: SignalRecord
+          module_path: qlib.workflow.record_temp
+          kwargs:
+            model: <MODEL>
+            dataset: <DATASET>
+        - class: SigAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs:
+            ana_long_short: False
+            ann_scaler: 252
+        - class: PortAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs:
+            config: *port_analysis_config

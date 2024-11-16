@@ -1,0 +1,117 @@
+qlib_init:
+    provider_uri: "D:\\qlib_data\\qlib_cn"
+    region: cn
+market: &market csi300
+benchmark: &benchmark SH000985
+data_handler_config: &data_handler_config
+    start_time: 2016-01-01
+    end_time: 2023-12-31
+    fit_start_time: 2016-01-01
+    fit_end_time: 2023-12-31
+    instruments: *market
+    infer_processors:
+        - class: FilterCol
+          kwargs:
+              fields_group: feature
+              col_list: [ 'CLOSE1', 'OPEN1', 'HIGH1', 'LOW1', 'VWAP1', 'VOLUME1']
+        - class: CSRankNorm
+          kwargs:
+              fields_group: feature
+        - class: FillnaType
+          kwargs:
+              fields_group: feature
+              fill_method: 'ffill'
+    learn_processors:
+        - class: DropnaLabel
+        - class: CSRankNorm
+          kwargs:
+              fields_group: label
+    label: ["Ref($close, -5) / Ref($close, -1) - 1"]
+port_analysis_config: &port_analysis_config
+    strategy:
+        class: TopkDropoutStrategy
+        module_path: qlib.contrib.strategy
+        kwargs:
+            signal: <PRED>
+            topk: 400
+            n_drop: 400
+    backtest:
+        start_time: 2021-01-01
+        end_time: 2023-03-01
+        account: 100000000
+        benchmark: *benchmark
+        exchange_kwargs:
+            limit_threshold: 0.095
+            deal_price: close
+            open_cost: 0.0005
+            close_cost: 0.0015
+            min_cost: 5
+
+task:
+    model:
+        class: Nonstationary_Transformer
+        module_path: Nonstationary_Transformer
+        kwargs:
+            seq_len: 60
+            pred_len: 5
+            label_len: 60
+            factor: 7
+            enc_in: 7
+            dec_in: 7
+            e_layers: 2
+            d_layers: 1
+            features: M
+            c_out: 7
+            d_model: 32
+            d_ff: 32
+            top_k: 5
+            n_heads: 4
+            des: Exp
+            itr: 1
+            dropout: 0.05
+            p_hidden_dims: [256, 256]
+            p_hidden_layers: 2
+            output_attention: False
+            num_kernels: 6
+            num_workers: 20
+            use_norm: True
+            loss: mse
+            activation: gelu
+            task_name: short_term_forecast
+            optimizer: adam
+            batch_size: 1024
+            n_epochs: 10
+            early_stop: 2
+            lr: 0.001
+            seed: 42
+            verbose: False
+            GPU: 0
+            n_jobs: 25
+    dataset:
+        class: InformerDatasetH
+        module_path: data_formatters.informer_dataset
+        kwargs:
+            handler:
+                class: Alpha360
+                module_path: qlib.contrib.data.handler
+                kwargs: *data_handler_config
+            segments:
+                train: [2016-01-01, 2019-12-31]
+                valid: [2020-01-01, 2020-12-31]
+                test: [2021-01-01, 2024-03-01]
+            step_len: 65
+    record: 
+        - class: SignalRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            model: <MODEL>
+            dataset: <DATASET>
+        - class: SigAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            ana_long_short: False
+            ann_scaler: 252
+        - class: PortAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            config: *port_analysis_config

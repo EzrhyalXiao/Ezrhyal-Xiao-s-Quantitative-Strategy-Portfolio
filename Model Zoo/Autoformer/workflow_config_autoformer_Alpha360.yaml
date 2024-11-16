@@ -1,0 +1,101 @@
+qlib_init:
+    provider_uri: "D:\\qlib_data\\qlib_cn"
+    region: cn
+market: &market csi300
+benchmark: &benchmark SH000300
+data_handler_config: &data_handler_config
+    start_time: 2016-01-01
+    end_time: 2023-12-31
+    fit_start_time: 2016-01-01
+    fit_end_time: 2023-12-31
+    instruments: *market
+    infer_processors:
+        - class: FilterCol
+          kwargs:
+              fields_group: feature
+              col_list: [ 'CLOSE1', 'OPEN1', 'HIGH1', 'LOW1', 'VWAP1', 'VOLUME1']
+        - class: CSRankNorm
+          kwargs:
+              fields_group: feature
+        - class: Fillna
+          kwargs:
+              fields_group: feature
+    learn_processors:
+        - class: DropnaLabel
+        - class: CSRankNorm
+          kwargs:
+              fields_group: label
+    label: ["Ref($close, -5) / Ref($close, -1) - 1"]
+port_analysis_config: &port_analysis_config
+    strategy:
+        class: TopkDropoutStrategy
+        module_path: qlib.contrib.strategy
+        kwargs:
+            signal: <PRED>
+            topk: 400
+            n_drop: 40
+    backtest:
+        start_time: 2021-01-01
+        end_time: 2023-03-01
+        account: 100000000
+        benchmark: *benchmark
+        exchange_kwargs:
+            limit_threshold: 0.095
+            deal_price: close
+            open_cost: 0.0005
+            close_cost: 0.0015
+            min_cost: 5
+task:
+    model:
+        class: Autoformer
+        module_path: Autoformer
+        kwargs:
+            d_feat: 6
+            seq_len: 60
+            pred_len: 5
+            label_len: 60
+            factor: 3
+            e_layers: 2
+            enc_in: 6
+            dec_in: 6
+            c_out: 6
+            n_heads: 4
+            d_model: 8
+            d_ff: 32
+            moving_avg: 5
+            n_epochs: 10
+            early_stop: 3
+            lr: 1e-3
+            batch_size: 1024
+            metric: loss
+            loss: mse
+            num_workers: 20
+            GPU: 0
+    dataset:
+        class: InformerDatasetH
+        module_path: data_formatters.informer_dataset
+        kwargs:
+            handler:
+                class: Alpha360
+                module_path: qlib.contrib.data.handler
+                kwargs: *data_handler_config
+            segments:
+                train: [2016-01-01, 2019-12-31]
+                valid: [2020-01-01, 2020-12-31]
+                test: [2021-01-01, 2023-12-31]
+            step_len: 65
+    record: 
+        - class: SignalRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            model: <MODEL>
+            dataset: <DATASET>
+        - class: SigAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            ana_long_short: False
+            ann_scaler: 252
+        - class: PortAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            config: *port_analysis_config

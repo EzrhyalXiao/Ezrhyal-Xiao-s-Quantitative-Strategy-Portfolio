@@ -1,0 +1,129 @@
+qlib_init:
+    provider_uri: "D:\\qlib_data\\qlib_cn"
+    region: cn
+market: &market all
+benchmark: &benchmark SH000985
+data_handler_config: &data_handler_config
+    start_time: 2016-01-01
+    end_time: 2023-12-31
+    fit_start_time: 2016-01-01
+    fit_end_time: 2023-12-31
+    instruments: *market
+    infer_processors:
+        - class: FilterCol
+          kwargs:
+              fields_group: feature
+              col_list: ['VWAP0', 'KMID', 'KLEN', 'CORD5',
+                         'KMID2', 'RESI5', 'CORR5', 'KLOW', 'VSTD5',
+                         'CORD10', 'RESI10', 'WVMA5', 'WVMA10', 'CORR10',
+                         'MIN60', 'CORD20', 'STD60', 'VSTD10', 'KLOW2',
+                         'ROC60', 'ROC5', 'RESI20', 'WVMA60', 'QTLD5', 'RSQR10']
+        - class: CSRankNorm
+          kwargs:
+              fields_group: feature
+        - class: Fillna
+          kwargs:
+              fields_group: feature
+    learn_processors:
+        - class: DropnaLabel
+        - class: CSRankNorm
+          kwargs:
+              fields_group: label
+    label: ["Ref($close, -5) / Ref($close, -1) - 1"]
+port_analysis_config: &port_analysis_config
+    strategy:
+        class: TopkDropoutStrategy
+        module_path: qlib.contrib.strategy
+        kwargs:
+            signal: <PRED>
+            topk: 400
+            n_drop: 400
+    backtest:
+        start_time: 2021-01-01
+        end_time: 2023-03-01
+        account: 100000000
+        benchmark: *benchmark
+        exchange_kwargs:
+            limit_threshold: 0.095
+            deal_price: close
+            open_cost: 0.0005
+            close_cost: 0.0015
+            min_cost: 5
+task:
+    model:
+        class: PITS
+        module_path: PITS
+        kwargs:
+            d_feat: 26
+            seq_len: 60
+            pred_len: 5
+            dropout: 0.0
+            batch_size: 1024
+            epoch: 10
+            early_stop: 3
+            optimizer: adam
+            loss: mse
+            metric: loss
+            lr: 0.01
+            enc_in: 6
+            dec_in: 6
+            d_model: 64
+            d_ff: 32
+            n_heads: 16
+            e_layers: 3
+            d_layers: 2
+            fc_dropout: 0.1
+            head_dropout: 0.1
+            norm: "batchnorm"
+            act: "gelu"
+            key_padding_mask: True
+            padding_var: None
+            attn_mask: None
+            res_attention: True
+            pre_norm: False
+            store_attn: False
+            pe: "zeros"
+            learn_pe: True
+            pretrain_head: False
+            head_type: "flatten"
+            individual: False
+            revin: False
+            affine: False
+            subtract_last: False
+            decomposition: False
+            kernel_size: 3
+            patch_len: 5
+            stride: 2
+            padding_patch: False
+            verbose: False
+            GPU: 0
+            n_jobs: 20
+            seed: 0
+    dataset:
+        class: PatchTSTDatasetH
+        module_path: data_formatters.patchtst_dataset
+        kwargs:
+            handler:
+                class: Alpha158
+                module_path: qlib.contrib.data.handler
+                kwargs: *data_handler_config
+            segments:
+                train: [2016-01-01, 2019-12-31]
+                valid: [2020-01-01, 2020-12-31]
+                test: [2021-01-01, 2023-03-01]
+            step_len: 65
+    record: 
+        - class: SignalRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            model: <MODEL>
+            dataset: <DATASET>
+        - class: SigAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            ana_long_short: False
+            ann_scaler: 252
+        - class: PortAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            config: *port_analysis_config
